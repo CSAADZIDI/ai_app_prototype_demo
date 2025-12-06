@@ -1,0 +1,25 @@
+# === Core API / Web ===
+fastapi>=0.119.0
+pydantic>=2.0
+uvicorn[standard]>=0.23.0
+python-dotenv
+httpx
+requests
+
+# === ML / Data / Monitoring ===
+pandas
+numpy
+scikit-learn
+xgboost
+matplotlib
+seaborn
+evidently>=0.7.0  # latest Evidently
+sniffio  # required by some async dependencies
+plotly
+mlflow
+
+# === Monitoring / Observability ===
+prometheus-client
+
+# === Testing / Utilities ===
+pytest
