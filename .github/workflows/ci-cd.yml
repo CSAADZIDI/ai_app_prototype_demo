@@ -61,7 +61,7 @@ jobs:
 
       # 8. Shut down containers
       - name: Stop services
-        run: docker-compose -f docker-compose.yml down
+        run: docker compose -f Compose.yml down
 
   # # Optional deployment job (if pushing Docker to registry)
   # deploy:
