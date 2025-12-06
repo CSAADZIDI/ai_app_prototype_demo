@@ -1,0 +1,62 @@
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_HOST=0.0.0.0
+      - APP_PORT=8000
+    volumes:
+      - .:/app
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:main-ubuntu
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SERVER_ROOT_URL=http://localhost:3000
+    depends_on:
+      - prometheus
+    volumes:
+      - ./grafana_data:/var/lib/grafana   # persist Grafana data
+
+  evidently:
+    image: evidently/evidently-service:latest
+    container_name: evidently
+    ports:
+      - "8080:8000"   # map internal 8000 → external 8080
+    environment:
+      - EVIDENTLY_SERVICE_PORT=8000      # correct env variable
+    volumes:
+      - ./evidently_reports:/app/evidently_reports
+      - ./evidently/workspace:/app/workspace   # Evidently stores dashboards here
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:latest
+    container_name: mlflow
+    ports:
+      - "5050:5000"
+    volumes:
+      - ./notebooks/mlruns:/app/notebooks/mlruns
+    command: >
+      mlflow server
+      --backend-store-uri file:/app/notebooks/mlruns
+      --default-artifact-root file:/app/notebooks/mlruns
+      --host 0.0.0.0
+  evidently-report-server:
+    image: nginx:alpine
+    container_name: evidently-report-server
+    ports:
+      - "8090:80"
+    volumes:
+      - ./evidently_reports:/usr/share/nginx/html:ro
+      - ./nginx_conf/nginx.conf:/etc/nginx/nginx.conf:ro

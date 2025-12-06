@@ -1,0 +1,14 @@
+artifact_uri: file:///Users/chaimasaad/Projects/ai_app_prototype/notebooks/mlruns/618997382843698341/b39ed918c6c747f6948196bfbc09cdbf/artifacts
+end_time: 1764926372034
+entry_point_name: ''
+experiment_id: '618997382843698341'
+lifecycle_stage: active
+run_id: b39ed918c6c747f6948196bfbc09cdbf
+run_name: angry-slug-375
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1764926369315
+status: 3
+tags: []
+user_id: chaimasaad

@@ -1,0 +1,14 @@
+artifact_uri: file:///Users/chaimasaad/Projects/ai_app_prototype/notebooks/mlruns/618997382843698341/e194593c730d459b9ddc30fe1dc34929/artifacts
+end_time: 1764926369266
+entry_point_name: ''
+experiment_id: '618997382843698341'
+lifecycle_stage: active
+run_id: e194593c730d459b9ddc30fe1dc34929
+run_name: popular-goose-371
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1764926366883
+status: 3
+tags: []
+user_id: chaimasaad

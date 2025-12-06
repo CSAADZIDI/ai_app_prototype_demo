@@ -1,0 +1,14 @@
+artifact_uri: file:///Users/chaimasaad/Projects/ai_app_prototype/notebooks/mlruns/618997382843698341/fd40045284884964adc18f33c59a3a70/artifacts
+end_time: 1764926369313
+entry_point_name: ''
+experiment_id: '618997382843698341'
+lifecycle_stage: active
+run_id: fd40045284884964adc18f33c59a3a70
+run_name: funny-mink-106
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1764926366883
+status: 3
+tags: []
+user_id: chaimasaad

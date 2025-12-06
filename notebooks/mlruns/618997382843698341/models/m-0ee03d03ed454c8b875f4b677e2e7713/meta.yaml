@@ -1,0 +1,10 @@
+artifact_location: file:///Users/chaimasaad/Projects/ai_app_prototype/notebooks/mlruns/618997382843698341/models/m-0ee03d03ed454c8b875f4b677e2e7713/artifacts
+creation_timestamp: 1764926352533
+experiment_id: '618997382843698341'
+last_updated_timestamp: 1764926354348
+model_id: m-0ee03d03ed454c8b875f4b677e2e7713
+model_type: null
+name: model
+source_run_id: 1791aa2090e1439891124adf55c61f4e
+status: 2
+status_message: null

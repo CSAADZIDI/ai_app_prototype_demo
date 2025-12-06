@@ -1,0 +1,10 @@
+artifact_location: file:///Users/chaimasaad/Projects/ai_app_prototype/notebooks/mlruns/618997382843698341/models/m-52694eab7f1b4034bd1e3aa7da0f1dbe/artifacts
+creation_timestamp: 1764926365607
+experiment_id: '618997382843698341'
+last_updated_timestamp: 1764926366817
+model_id: m-52694eab7f1b4034bd1e3aa7da0f1dbe
+model_type: null
+name: best_estimator
+source_run_id: b8be9b0deff24e14938633bdfcddfa68
+status: 2
+status_message: null
