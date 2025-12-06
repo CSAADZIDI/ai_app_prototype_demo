@@ -47,11 +47,11 @@ jobs:
 
       # 5. Build Docker images
       - name: Build Docker Compose services
-        run: docker-compose -f docker-compose.yml build
+        run: docker compose -f Compose.yml build
 
       # 6. Optionally run containers to smoke test
       - name: Start services in background
-        run: docker-compose -f docker-compose.yml up -d
+        run: docker compose -f Compose.yml up -d
 
       # 7. Smoke test API
       - name: Smoke test FastAPI
