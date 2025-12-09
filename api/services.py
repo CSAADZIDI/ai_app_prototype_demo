@@ -39,7 +39,10 @@ async def make_prediction(
     return prediction
 
 
-def _predict(house: House, request: Request, ville: str) -> Tuple[Prediction, dict]:
+def _predict(house: House,
+              request: Request,
+                ville: str
+                ) -> Tuple[Prediction, dict]:
     """
     Effectue la prédiction synchrone du prix au m² sur la base des caractéristiques du logement.
 
@@ -84,5 +87,5 @@ def _predict(house: House, request: Request, ville: str) -> Tuple[Prediction, di
     "Nombre pieces principales": house.nombre_pieces,
     "Surface terrain": house.surface_terrain,
     "Nombre de lots": house.nombre_lots,
-}
+    }
     return prediction, house_dict
