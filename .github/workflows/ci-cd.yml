@@ -81,20 +81,23 @@ jobs:
       - name: Build and push API Docker image
         uses: docker/build-push-action@v5
         with:
-          context: ./api
+          context: .
+          file: ./Dockerfile
           push: true
           tags: |
             ${{ env.API_IMAGE_NAME }}:latest
             ${{ env.API_IMAGE_NAME }}:${{ github.sha }}
 
-      - name: Build and push Evidently Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./evidently
-          push: true
-          tags: |
-            ${{ env.EVIDENTLY_IMAGE_NAME }}:latest
-            ${{ env.EVIDENTLY_IMAGE_NAME }}:${{ github.sha }}
+      # Uncomment this section when you have a Dockerfile for Evidently
+      # - name: Build and push Evidently Docker image
+      #   uses: docker/build-push-action@v5
+      #   with:
+      #     context: ./evidently
+      #     file: ./evidently/Dockerfile
+      #     push: true
+      #     tags: |
+      #       ${{ env.EVIDENTLY_IMAGE_NAME }}:latest
+      #       ${{ env.EVIDENTLY_IMAGE_NAME }}:${{ github.sha }}
 
   deploy:
     name: Deploy API & Evidently to Azure WebApp Service
@@ -117,15 +120,16 @@ jobs:
             --docker-registry-server-user ${{ secrets.AZURE_ACR_USERNAME }} \
             --docker-registry-server-password ${{ secrets.AZURE_ACR_PASSWORD }}
 
-      - name: Update Evidently container image
-        run: |
-          az webapp config container set \
-            --name ${{ env.AZURE_WEBAPP_NAME_EVIDENTLY }} \
-            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --docker-custom-image-name ${{ env.EVIDENTLY_IMAGE_NAME }}:latest \
-            --docker-registry-server-url https://${{ secrets.AZURE_ACR_LOGIN_SERVER }} \
-            --docker-registry-server-user ${{ secrets.AZURE_ACR_USERNAME }} \
-            --docker-registry-server-password ${{ secrets.AZURE_ACR_PASSWORD }}
+      # Uncomment when Evidently Docker image is ready
+      # - name: Update Evidently container image
+      #   run: |
+      #     az webapp config container set \
+      #       --name ${{ env.AZURE_WEBAPP_NAME_EVIDENTLY }} \
+      #       --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+      #       --docker-custom-image-name ${{ env.EVIDENTLY_IMAGE_NAME }}:latest \
+      #       --docker-registry-server-url https://${{ secrets.AZURE_ACR_LOGIN_SERVER }} \
+      #       --docker-registry-server-user ${{ secrets.AZURE_ACR_USERNAME }} \
+      #       --docker-registry-server-password ${{ secrets.AZURE_ACR_PASSWORD }}
 
       - name: Restart API Web App
         run: |
@@ -133,11 +137,12 @@ jobs:
             --name ${{ env.AZURE_WEBAPP_NAME_API }} \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }}
 
-      - name: Restart Evidently Web App
-        run: |
-          az webapp restart \
-            --name ${{ env.AZURE_WEBAPP_NAME_EVIDENTLY }} \
-            --resource-group ${{ env.AZURE_RESOURCE_GROUP }}
+      # Uncomment when Evidently image is ready
+      # - name: Restart Evidently Web App
+      #   run: |
+      #     az webapp restart \
+      #       --name ${{ env.AZURE_WEBAPP_NAME_EVIDENTLY }} \
+      #       --resource-group ${{ env.AZURE_RESOURCE_GROUP }}
 
       - name: Check API status
         run: |
@@ -147,10 +152,11 @@ jobs:
             --query state -o tsv)
           echo "API Web App state: $STATE"
 
-      - name: Check Evidently status
-        run: |
-          STATE=$(az webapp show \
-            --name ${{ env.AZURE_WEBAPP_NAME_EVIDENTLY }} \
-            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --query state -o tsv)
-          echo "Evidently Web App state: $STATE"
+      # Uncomment when Evidently image is ready
+      # - name: Check Evidently status
+      #   run: |
+      #     STATE=$(az webapp show \
+      #       --name ${{ env.AZURE_WEBAPP_NAME_EVIDENTLY }} \
+      #       --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+      #       --query state -o tsv)
+      #     echo "Evidently Web App state: $STATE"
