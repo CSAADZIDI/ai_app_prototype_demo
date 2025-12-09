@@ -17,7 +17,7 @@ async def make_prediction(
     """
     Effectue une prédiction du prix au m² pour un bien immobilier donné dans une ville supportée.
 
-    Cette fonction est asynchrone et délègue la prédiction réelle à la fonction predict 
+    Cette fonction est asynchrone et délègue la prédiction réelle à la fonction predict
     en utilisant `asyncio.to_thread` pour ne pas bloquer l'exécution async.
 
     Args:
