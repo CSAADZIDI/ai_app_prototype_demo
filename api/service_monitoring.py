@@ -1,6 +1,5 @@
-import os
+# service_monitoring.py
 import pandas as pd
-import requests
 from datetime import datetime
 
 from evidently import Report

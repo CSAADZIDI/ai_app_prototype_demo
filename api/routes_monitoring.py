@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from fastapi.responses import PlainTextResponse
-from .metrics import REQUEST_COUNT, REQUEST_LATENCY, metrics_response
+from .metrics import metrics_response
 from prometheus_client import CONTENT_TYPE_LATEST
 
 

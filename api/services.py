@@ -10,7 +10,7 @@ from fastapi import BackgroundTasks
 from .service_monitoring import log_prediction_for_evidently  # import your function
 
 
-async def make_prediction(data: House, city_name: str, request: Request,background_tasks: BackgroundTasks) -> Prediction:
+async def make_prediction(data: House, city_name: str, request: Request, background_tasks: BackgroundTasks) -> Prediction:
     """
     Effectue une prédiction du prix au m² pour un bien immobilier donné dans une ville supportée.
 
@@ -29,10 +29,8 @@ async def make_prediction(data: House, city_name: str, request: Request,backgrou
         Prediction: Le résultat de la prédiction contenant le prix estimé, la ville et le type de modèle utilisé.
     """
     if city_name.lower() not in {"lille", "bordeaux"}:
-        raise HTTPException(status_code=400, detail="Ville non prise en charge")
-    
+        raise HTTPException(status_code=400, detail="Ville non prise en charge")    
     prediction, house_dict = await asyncio.to_thread(_predict, data, request, city_name.lower())
-
     background_tasks.add_task(log_prediction_for_evidently, house_dict, prediction.prix_m2_estime)
 
     return prediction

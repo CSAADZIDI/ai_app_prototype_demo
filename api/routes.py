@@ -32,7 +32,7 @@ async def get_prediction_lille(
     REQUEST_COUNT.labels(method=method, endpoint=endpoint).inc()
     start = time.time()
     try:
-        return await make_prediction(house, "lille", request,background_tasks)
+        return await make_prediction(house, "lille", request, background_tasks)
     finally:
         REQUEST_LATENCY.labels(method=method, endpoint=endpoint).observe(time.time() - start)
 
@@ -51,7 +51,7 @@ async def get_prediction_bordeaux(
     REQUEST_COUNT.labels(method=method, endpoint=endpoint).inc()
     start = time.time()
     try:
-        return await make_prediction(house, "bordeaux", request,background_tasks)
+        return await make_prediction(house, "bordeaux", request, background_tasks)
     finally:
         REQUEST_LATENCY.labels(method=method, endpoint=endpoint).observe(time.time() - start)
 
@@ -70,6 +70,6 @@ async def get_prediction(
     REQUEST_COUNT.labels(method=method, endpoint=endpoint).inc()
     start = time.time()
     try:
-        return await make_prediction(cityhouse.features, cityhouse.ville, request,background_tasks)
+        return await make_prediction(cityhouse.features, cityhouse.ville, request, background_tasks)
     finally:
         REQUEST_LATENCY.labels(method=method, endpoint=endpoint).observe(time.time() - start)

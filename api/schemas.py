@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field, field_validator
 from typing import Literal
 
+
 class House(BaseModel):
     """
     Représente les caractéristiques d'un bien immobilier.
