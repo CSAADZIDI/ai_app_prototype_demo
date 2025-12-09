@@ -7,6 +7,7 @@ from typing import Tuple
 from fastapi import BackgroundTasks
 from .service_monitoring import log_prediction_for_evidently  # import your function
 
+
 async def make_prediction(data: House, city_name: str, request: Request, background_tasks: BackgroundTasks) -> Prediction:
     """
     Effectue une prédiction du prix au m² pour un bien immobilier donné dans une ville supportée.
@@ -68,8 +69,6 @@ def _predict(house: House, request: Request, ville: str) -> Tuple[Prediction, di
     input_scaled = scaler_X.transform(house_array)
     output_scaled = model.predict(input_scaled)
     output = scaler_y.inverse_transform(output_scaled.reshape(1, -1))
-
-
 
 
     prediction = Prediction( prix_m2_estime=output[0][0], ville_modele=ville.capitalize(), model=type(model).__name__)
