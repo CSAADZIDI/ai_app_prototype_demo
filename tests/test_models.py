@@ -1,5 +1,3 @@
-import os
-import pytest
 from unittest.mock import patch
 
 import api.models as models

@@ -1,6 +1,6 @@
 # services.py
 from fastapi import Request, HTTPException
-from .schemas import House, Prediction, CityHouse
+from .schemas import House, Prediction
 import numpy as np
 import asyncio
 from typing import Tuple
@@ -8,6 +8,7 @@ from typing import Tuple
 
 from fastapi import BackgroundTasks
 from .service_monitoring import log_prediction_for_evidently  # import your function
+
 
 async def make_prediction(data: House, city_name: str, request: Request,background_tasks: BackgroundTasks) -> Prediction:
     """
@@ -32,11 +33,7 @@ async def make_prediction(data: House, city_name: str, request: Request,backgrou
     
     prediction, house_dict = await asyncio.to_thread(_predict, data, request, city_name.lower())
 
-    background_tasks.add_task(
-    log_prediction_for_evidently,
-    house_dict,
-    prediction.prix_m2_estime
-    )
+    background_tasks.add_task(log_prediction_for_evidently, house_dict, prediction.prix_m2_estime)
 
     return prediction
 
@@ -80,11 +77,7 @@ def _predict(house: House, request: Request, ville: str) -> Tuple[Prediction, di
 
 
 
-    prediction = Prediction(
-        prix_m2_estime=output[0][0],
-        ville_modele=ville.capitalize(),
-        model=type(model).__name__
-    )
+    prediction = Prediction( prix_m2_estime=output[0][0], ville_modele=ville.capitalize(), model=type(model).__name__)
 
     # Create dictionary for Evidently
     house_dict = {
@@ -94,3 +87,4 @@ def _predict(house: House, request: Request, ville: str) -> Tuple[Prediction, di
     "Nombre de lots": house.nombre_lots,
 }
     return prediction, house_dict
+

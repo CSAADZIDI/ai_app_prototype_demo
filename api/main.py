@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request
 from contextlib import asynccontextmanager
-from .metrics import REQUEST_COUNT,REQUEST_LATENCY
+from .metrics import REQUEST_COUNT, REQUEST_LATENCY
 import time
 
 from .routes import router
@@ -15,6 +15,8 @@ from .models import (
     load_model_a_bordeaux,
     load_model_m_bordeaux,
 )
+
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -59,6 +61,8 @@ app.include_router(router)
 app.include_router(router_monitoring)
 
 # ----------------- Middleware for Prometheus -----------------
+
+
 @app.middleware("http")
 async def prometheus_middleware(request: Request, call_next):
     """
@@ -78,4 +82,6 @@ async def prometheus_middleware(request: Request, call_next):
     REQUEST_LATENCY.labels(method=method, endpoint=endpoint).observe(process_time)
 
     return response
+
+
 

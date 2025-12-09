@@ -13,6 +13,7 @@ raw_users = os.getenv("API_USERS", "")
 # Exemple : "admin:admin123,user1:pass1"
 user_db = dict(user.split(":") for user in raw_users.split(",") if ":" in user)
 
+
 def authenticate(credentials: HTTPBasicCredentials = Depends(security)):
     username = credentials.username
     password = credentials.password
