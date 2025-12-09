@@ -16,8 +16,6 @@ from .models import (
     load_model_m_bordeaux,
 )
 
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
@@ -82,6 +80,4 @@ async def prometheus_middleware(request: Request, call_next):
     REQUEST_LATENCY.labels(method=method, endpoint=endpoint).observe(process_time)
 
     return response
-
-
 
