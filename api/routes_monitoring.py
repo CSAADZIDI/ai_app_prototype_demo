@@ -6,6 +6,7 @@ from prometheus_client import CONTENT_TYPE_LATEST
 
 router_monitoring = APIRouter()
 
+
 @router_monitoring.get("/health")
 def health():
     return {"status": "ok"}

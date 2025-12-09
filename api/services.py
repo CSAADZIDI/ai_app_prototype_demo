@@ -8,7 +8,12 @@ from fastapi import BackgroundTasks
 from .service_monitoring import log_prediction_for_evidently  # import your function
 
 
-async def make_prediction(data: House, city_name: str, request: Request, background_tasks: BackgroundTasks) -> Prediction:
+async def make_prediction(
+    data: House,
+    city_name: str,
+    request: Request,
+    background_tasks: BackgroundTasks,
+) -> Prediction:
     """
     Effectue une prédiction du prix au m² pour un bien immobilier donné dans une ville supportée.
 

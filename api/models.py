@@ -20,6 +20,7 @@ def load_model_a_lille():
     """
     return joblib.load(models_file)['model_a']
 
+
 def load_model_a_bordeaux():
     """
     Charge le modèle de régression pour les appartements à bordeaux.
