@@ -17,8 +17,7 @@ async def make_prediction(
     """
     Effectue une prédiction du prix au m² pour un bien immobilier donné dans une ville supportée.
 
-    Cette fonction est asynchrone et délègue la prédiction réelle à la fonction `_predict` 
-    en utilisant `asyncio.to_thread` pour ne pas bloquer l'exécution async.
+    Cette fonction est asynchrone et délègue la prédiction réelle à la fonction `_predict` en utilisant `asyncio.to_thread` pour ne pas bloquer l'exécution async.
 
     Args:
         data (House): Les caractéristiques du logement pour lequel on souhaite prédire le prix.
@@ -29,8 +28,10 @@ async def make_prediction(
         HTTPException: Si la ville n'est pas prise en charge.
 
     Returns:
-        Prediction: Le résultat de la prédiction contenant le prix estimé, la ville et le type de modèle utilisé.
+        Prediction: Le résultat de la prédiction contenant le prix estimé,
+        la ville et le type de modèle utilisé.
     """
+
     if city_name.lower() not in {"lille", "bordeaux"}:
         raise HTTPException(status_code=400, detail="Ville non prise en charge")    
     prediction, house_dict = await asyncio.to_thread(_predict, data, request, city_name.lower())
