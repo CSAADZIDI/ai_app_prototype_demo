@@ -4,11 +4,8 @@ from .schemas import House, Prediction
 import numpy as np
 import asyncio
 from typing import Tuple
-
-
 from fastapi import BackgroundTasks
 from .service_monitoring import log_prediction_for_evidently  # import your function
-
 
 async def make_prediction(data: House, city_name: str, request: Request, background_tasks: BackgroundTasks) -> Prediction:
     """
@@ -85,4 +82,3 @@ def _predict(house: House, request: Request, ville: str) -> Tuple[Prediction, di
     "Nombre de lots": house.nombre_lots,
 }
     return prediction, house_dict
-
