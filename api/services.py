@@ -17,7 +17,7 @@ async def make_prediction(
     """
     Effectue une prédiction du prix au m² pour un bien immobilier donné dans une ville supportée.
 
-    Cette fonction est asynchrone et délègue la prédiction réelle à la fonction `_predict` 
+    Cette fonction est asynchrone et délègue la prédiction réelle à la fonction predict 
     en utilisant `asyncio.to_thread` pour ne pas bloquer l'exécution async.
 
     Args:
@@ -34,7 +34,8 @@ async def make_prediction(
     """
 
     if city_name.lower() not in {"lille", "bordeaux"}:
-        raise HTTPException(status_code=400, detail="Ville non prise en charge")    
+        raise HTTPException(status_code=400, detail="Ville non prise en charge")
+        
     prediction, house_dict = await asyncio.to_thread(_predict, data, request, city_name.lower())
     background_tasks.add_task(log_prediction_for_evidently, house_dict, prediction.prix_m2_estime)
 
@@ -42,9 +43,9 @@ async def make_prediction(
 
 
 def _predict(house: House,
-              request: Request,
-                ville: str
-                ) -> Tuple[Prediction, dict]:
+            request: Request,
+            ville: str
+            ) -> Tuple[Prediction, dict]:
     """
     Effectue la prédiction synchrone du prix au m² sur la base des caractéristiques du logement.
 
@@ -59,8 +60,7 @@ def _predict(house: House,
     Returns:
         Prediction: Le résultat de la prédiction avec le prix estimé, la ville et le nom du modèle utilisé.
     """
-    
-    
+     
     house_array = np.array([[house.surface_bati, house.nombre_pieces, house.surface_terrain, house.nombre_lots]])
 
     if house.type_local.lower() == "appartement":
@@ -81,7 +81,7 @@ def _predict(house: House,
     output = scaler_y.inverse_transform(output_scaled.reshape(1, -1))
 
 
-    prediction = Prediction( prix_m2_estime=output[0][0], ville_modele=ville.capitalize(), model=type(model).__name__)
+    prediction = Prediction(prix_m2_estime=output[0][0], ville_modele=ville.capitalize(), model=type(model).__name__)
 
     # Create dictionary for Evidently
     house_dict = {
