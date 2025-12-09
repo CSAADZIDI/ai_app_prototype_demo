@@ -43,9 +43,9 @@ async def make_prediction(
 
 
 def _predict(house: House,
-            request: Request,
-            ville: str
-            ) -> Tuple[Prediction, dict]:
+        request: Request,
+        ville: str
+        ) -> Tuple[Prediction, dict]:
     """
     Effectue la prédiction synchrone du prix au m² sur la base des caractéristiques du logement.
 
@@ -66,7 +66,7 @@ def _predict(house: House,
     if house.type_local.lower() == "appartement":
         model = request.app.state.model_a if ville == "lille" else request.app.state.model_a_b
         scaler_X = request.app.state.scaler_Xa
-        scaler_y = request.app.state.scaler_ya 
+        scaler_y = request.app.state.scaler_ya
 
     elif house.type_local.lower() == "maison":
         model = request.app.state.model_m if ville == "lille" else request.app.state.model_m_b
