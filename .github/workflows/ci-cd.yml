@@ -10,19 +10,18 @@ env:
   API_IMAGE_NAME: ${{ secrets.AZURE_ACR_LOGIN_SERVER }}/api-app
   AZURE_WEBAPP_NAME_API: apiwebapp
   AZURE_WEBAPP_NAME_EVIDENTLY: eviwebapp
-  AZURE_RESOURCE_GROUP: csaadRG  
+  AZURE_RESOURCE_GROUP: csaadRG
 
 jobs:
-  lint:
-    name: Lint Code
-    runs-on: ubuntu-latest
 
+  lint:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: "3.12"
 
       - name: Install flake8
         run: |
@@ -33,74 +32,70 @@ jobs:
         run: flake8 .
 
   test:
-    name: Unit & Integration Tests with Docker Compose
     runs-on: ubuntu-latest
     needs: lint
-
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Docker Compose
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Start all services including Evidently
-        run: docker compose -f Compose.yml up -d --build
+      - name: Start services
+        run: docker-compose -f docker-compose.yml up -d --build
 
       - name: Wait for services to be ready
-        run: |
-          echo "Waiting for API and Evidently to start..."
-          sleep 15  # replace with healthcheck loops if needed
+        run: sleep 15
 
       - name: Install test dependencies
-        run: pip install -r requirements.txt pytest pytest-asyncio
+        run: |
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio
 
-      - name: Run tests against API (with Evidently running)
+      - name: Run tests
         run: pytest -v
 
       - name: Stop services
-        run: docker compose -f Compose.yml down
+        run: docker-compose -f docker-compose.yml down
 
   build-and-push:
-    name: Build & Push API Docker image to ACR
     runs-on: ubuntu-latest
     needs: test
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-
     steps:
       - uses: actions/checkout@v4
 
       - name: Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Login to Azure Container Registry
+      - name: Login to ACR
         uses: azure/docker-login@v1
         with:
           login-server: ${{ secrets.AZURE_ACR_LOGIN_SERVER }}
           username: ${{ secrets.AZURE_ACR_USERNAME }}
           password: ${{ secrets.AZURE_ACR_PASSWORD }}
 
-      - name: Build and push API Docker image
+      - name: Build & push API image
         uses: docker/build-push-action@v5
         with:
-          context: .
-          file: ./Dockerfile
+          context: ${{ github.workspace }}    # FIXED CONTEXT
+          file: ${{ github.workspace }}/Dockerfile  # FIXED PATH
           push: true
           tags: |
             ${{ env.API_IMAGE_NAME }}:latest
             ${{ env.API_IMAGE_NAME }}:${{ github.sha }}
 
   deploy:
-    name: Deploy API & Evidently to Azure WebApp Service
     runs-on: ubuntu-latest
     needs: build-and-push
 
     steps:
-      - uses: azure/login@v1
+      - name: Azure Login
+        uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # Deploy API Web App
-      - name: Update API container image
+      # --- DEPLOY API ---
+      - name: Set API container
         run: |
           az webapp config container set \
             --name ${{ env.AZURE_WEBAPP_NAME_API }} \
@@ -110,25 +105,39 @@ jobs:
             --docker-registry-server-user ${{ secrets.AZURE_ACR_USERNAME }} \
             --docker-registry-server-password ${{ secrets.AZURE_ACR_PASSWORD }}
 
-      - name: Restart API Web App
-        run: az webapp restart --name ${{ env.AZURE_WEBAPP_NAME_API }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }}
+      - name: Ensure API exposes port 8000
+        run: |
+          az webapp config appsettings set \
+            --name ${{ env.AZURE_WEBAPP_NAME_API }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --settings WEBSITES_PORT=8000
 
-      # Deploy Evidently Web App (from Docker Hub)
-      - name: Update Evidently container image
+      - name: Restart API App
+        run: |
+          az webapp restart \
+            --name ${{ env.AZURE_WEBAPP_NAME_API }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }}
+
+      # --- DEPLOY EVIDENTLY ---
+      - name: Deploy Evidently container
         run: |
           az webapp create \
             --name ${{ env.AZURE_WEBAPP_NAME_EVIDENTLY }} \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
             --plan <YOUR_APP_SERVICE_PLAN> \
             --deployment-container-image-name evidently/evidently-service:latest \
-            || echo "Evidently app already exists, updating image..." 
+            || echo "Evidently app exists, updating..."
 
-      - name: Update Evidently container image if already exists
+      - name: Configure Evidently container (force update)
         run: |
           az webapp config container set \
             --name ${{ env.AZURE_WEBAPP_NAME_EVIDENTLY }} \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --docker-custom-image-name evidently/evidently-service:latest
+            --docker-custom-image-name evidently/evidently-service:latest \
+            --docker-registry-server-url https://index.docker.io
 
-      - name: Restart Evidently Web App
-        run: az webapp restart --name ${{ env.AZURE_WEBAPP_NAME_EVIDENTLY }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }}
+      - name: Restart Evidently App
+        run: |
+          az webapp restart \
+            --name ${{ env.AZURE_WEBAPP_NAME_EVIDENTLY }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }}
