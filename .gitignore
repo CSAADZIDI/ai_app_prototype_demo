@@ -6,3 +6,4 @@ __pycache__/
 *.py[cod]
 raw_data/*.txt
 raw_data/*.csv
+.DS_Store
