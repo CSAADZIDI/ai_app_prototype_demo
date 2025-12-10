@@ -1,0 +1,15 @@
+creation_timestamp: 1765370894667
+current_stage: None
+deployment_job_state: null
+description: ''
+last_updated_timestamp: 1765370894667
+model_id: m-ff738e6781dd41ce87b473db3acd2617
+name: immopredict
+run_id: 0c329c7cc1ae4bb8b11df8d1d39d9552
+run_link: ''
+source: models:/m-ff738e6781dd41ce87b473db3acd2617
+status: READY
+status_message: null
+storage_location: file:///Users/chaimasaad/Projects/ai_app_prototype/notebooks/mlruns/618997382843698341/models/m-ff738e6781dd41ce87b473db3acd2617/artifacts
+user_id: null
+version: 1
