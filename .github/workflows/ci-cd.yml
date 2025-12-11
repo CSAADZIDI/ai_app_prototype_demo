@@ -1,25 +1,64 @@
-name: CI/CD → Azure Container Apps (Compose)
+name: CI/CD → Push images to ACR (API + stack)
 
 on:
   push:
     branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
-# Top-level environment (edit these to match your Azure resources)
 env:
-  AZURE_RESOURCE_GROUP: csaadRG
-  AZURE_LOCATION: francecentral
-  ACA_ENVIRONMENT: my-environment               # the Container Apps environment name
-  STORAGE_ACCOUNT: mystorageacct                # name for storage account (must be globally unique)
-  # File share names (will be created if missing)
-  SHARE_MLRUNS: mlruns
-  SHARE_GRAFANA: grafana-data
-  SHARE_EVIDENTLY: evidently-reports
+  # Azure / ACR values (set these as repository secrets where appropriate)
+  AZURE_ACR_LOGIN_SERVER: ${{ secrets.AZURE_ACR_LOGIN_SERVER }}
+  AZURE_ACR_USERNAME: ${{ secrets.AZURE_ACR_USERNAME }}
+  AZURE_ACR_PASSWORD: ${{ secrets.AZURE_ACR_PASSWORD }}
 
 jobs:
+  lint:
+    name: Lint (flake8)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install flake8
+        run: python -m pip install --upgrade pip && pip install flake8
+
+      - name: Run flake8
+        run: flake8 .
+
+  test:
+    name: Tests (pytest)
+    runs-on: ubuntu-latest
+    needs: lint
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio
+
+      - name: Run tests
+        run: pytest -v
+
   build-and-push:
     name: Build & push images to ACR
     runs-on: ubuntu-latest
-
+    needs: test
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -27,199 +66,110 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Login to ACR
+      - name: Login to ACR (Docker)
         uses: azure/docker-login@v1
         with:
-          login-server: ${{ secrets.AZURE_ACR_LOGIN_SERVER }}
-          username: ${{ secrets.AZURE_ACR_USERNAME }}
-          password: ${{ secrets.AZURE_ACR_PASSWORD }}
+          login-server: ${{ env.AZURE_ACR_LOGIN_SERVER }}
+          username: ${{ env.AZURE_ACR_USERNAME }}
+          password: ${{ env.AZURE_ACR_PASSWORD }}
 
-      # Build & push api (source-build)
-      - name: Build & push api image
+      - name: Configure variables
         run: |
-          IMAGE=${{ secrets.AZURE_ACR_LOGIN_SERVER }}/api:${GITHUB_SHA}
-          docker build -t $IMAGE .
-          docker push $IMAGE
+          echo "ACR=${AZURE_ACR_LOGIN_SERVER}" >> $GITHUB_ENV
+          echo "SHA=${GITHUB_SHA}" >> $GITHUB_ENV
 
-      # Re-tag & push 3rd-party images into your ACR so Container Apps can pull them reliably
-      - name: Re-tag & push prometheus
-        run: |
-          SRC=prom/prometheus:latest
-          IMAGE=${{ secrets.AZURE_ACR_LOGIN_SERVER }}/prometheus:${GITHUB_SHA}
-          docker pull $SRC
-          docker tag $SRC $IMAGE
-          docker push $IMAGE
-
-      - name: Re-tag & push grafana
-        run: |
-          SRC=grafana/grafana:main-ubuntu
-          IMAGE=${{ secrets.AZURE_ACR_LOGIN_SERVER }}/grafana:${GITHUB_SHA}
-          docker pull $SRC
-          docker tag $SRC $IMAGE
-          docker push $IMAGE
-
-      - name: Re-tag & push mlflow
-        run: |
-          SRC=ghcr.io/mlflow/mlflow:latest
-          IMAGE=${{ secrets.AZURE_ACR_LOGIN_SERVER }}/mlflow:${GITHUB_SHA}
-          docker pull $SRC
-          docker tag $SRC $IMAGE
-          docker push $IMAGE
-
-      - name: Re-tag & push evidently service
-        run: |
-          SRC=evidently/evidently-service:latest
-          IMAGE=${{ secrets.AZURE_ACR_LOGIN_SERVER }}/evidently:${GITHUB_SHA}
-          docker pull $SRC
-          docker tag $SRC $IMAGE
-          docker push $IMAGE
-
-      - name: Re-tag & push nginx (report server)
-        run: |
-          SRC=nginx:alpine
-          IMAGE=${{ secrets.AZURE_ACR_LOGIN_SERVER }}/evidently-report-server:${GITHUB_SHA}
-          docker pull $SRC
-          docker tag $SRC $IMAGE
-          docker push $IMAGE
-
-      # Update docker-compose.yml images to point at your ACR + SHA tags
-      - name: Update docker-compose.yml to use ACR images
-        run: |
-          # make a backup
-          cp docker-compose.yml docker-compose.yml.ci.bak
-
-          # Replace images for services (works for current compose snippet)
-          perl -0777 -pe "s|image:\s*prom/prometheus:.*|image: ${{ secrets.AZURE_ACR_LOGIN_SERVER }}/prometheus:${GITHUB_SHA}|g" -i docker-compose.yml
-          perl -0777 -pe "s|image:\s*grafana/grafana:.*|image: ${{ secrets.AZURE_ACR_LOGIN_SERVER }}/grafana:${GITHUB_SHA}|g" -i docker-compose.yml
-          perl -0777 -pe "s|image:\s*ghcr.io/mlflow/mlflow:.*|image: ${{ secrets.AZURE_ACR_LOGIN_SERVER }}/mlflow:${GITHUB_SHA}|g" -i docker-compose.yml
-          perl -0777 -pe "s|image:\s*evidently/evidently-service:.*|image: ${{ secrets.AZURE_ACR_LOGIN_SERVER }}/evidently:${GITHUB_SHA}|g" -i docker-compose.yml
-          perl -0777 -pe "s|image:\s*nginx:alpine|image: ${{ secrets.AZURE_ACR_LOGIN_SERVER }}/evidently-report-server:${GITHUB_SHA}|g" -i docker-compose.yml
-
-          # For the api service we built locally — ensure we reference the ACR image too
-          # This assumes your api service in compose uses `build:` originally; replace it with image:...
-          perl -0777 -pe "s|(^\s*api:\n\s*build:.*?)(?=(\n\s*[a-zA-Z0-9_-]+:|\z)|$)|api:\n  image: ${{ secrets.AZURE_ACR_LOGIN_SERVER }}/api:${GITHUB_SHA}\n|s" -i docker-compose.yml || true
-
-          echo "Updated docker-compose.yml (backup: docker-compose.yml.ci.bak)"
-          echo "-----"
-          sed -n '1,200p' docker-compose.yml || true
-
-  deploy:
-    name: Deploy to Azure Container Apps (Compose)
-    runs-on: ubuntu-latest
-    needs: build-and-push
-
-    steps:
-      - name: Checkout repo (again)
-        uses: actions/checkout@v4
-
-      - name: Login to Azure
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: Install Container Apps CLI extensions
-        run: |
-          # Install/upgrade containerapp + compose extensions
-          az extension add --name containerapp --upgrade || az extension update --name containerapp || true
-          az extension add --name containerapp-compose --upgrade || az extension update --name containerapp-compose || true
-          az version
-
-      - name: Create resource group & Container Apps environment (if missing)
-        run: |
-          # ensure resource group exists
-          az group create --name ${{ env.AZURE_RESOURCE_GROUP }} --location ${{ env.AZURE_LOCATION }}
-
-          # create environment if missing
-          if ! az containerapp env show -g ${{ env.AZURE_RESOURCE_GROUP }} -n ${{ env.ACA_ENVIRONMENT }} >/dev/null 2>&1; then
-            az containerapp env create \
-              --name ${{ env.ACA_ENVIRONMENT }} \
-              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-              --location ${{ env.AZURE_LOCATION }}
-          else
-            echo "Container Apps environment '${{ env.ACA_ENVIRONMENT }}' already exists"
-          fi
-
-      - name: Create storage account & file shares (if missing) and register with environment
-        env:
-          AZURE_STORAGE_ACCOUNT: ${{ env.STORAGE_ACCOUNT }}
-          RG: ${{ env.AZURE_RESOURCE_GROUP }}
-          LOCATION: ${{ env.AZURE_LOCATION }}
+      # -----------------------------
+      # Build & push your API image
+      # -----------------------------
+      - name: Build API image (from root Dockerfile)
         run: |
           set -e
+          IMAGE="$ACR/api:${SHA}"
+          LATEST="$ACR/api:latest"
+          echo "Building $IMAGE"
+          docker build --pull -t "$IMAGE" .
+          docker tag "$IMAGE" "$LATEST"
+          docker push "$IMAGE"
+          docker push "$LATEST"
+          echo "Pushed: $IMAGE and $LATEST"
 
-          # Create storage account (enable large file share for big mlruns if needed)
-          if ! az storage account show -n $AZURE_STORAGE_ACCOUNT -g $RG >/dev/null 2>&1; then
-            az storage account create \
-              --name $AZURE_STORAGE_ACCOUNT \
-              --resource-group $RG \
-              --location $LOCATION \
-              --sku Standard_LRS \
-              --kind StorageV2 \
-              --enable-large-file-share
-          else
-            echo "Storage account $AZURE_STORAGE_ACCOUNT exists"
-          fi
-
-          # get storage account key (used to register the environment storage)
-          STORAGE_KEY=$(az storage account keys list -g $RG -n $AZURE_STORAGE_ACCOUNT --query "[0].value" -o tsv)
-          echo "::add-mask::$STORAGE_KEY"
-
-          # Create file shares if missing
-          az storage share create --name "${{ env.SHARE_MLRUNS }}" --account-name $AZURE_STORAGE_ACCOUNT || true
-          az storage share create --name "${{ env.SHARE_GRAFANA }}" --account-name $AZURE_STORAGE_ACCOUNT || true
-          az storage share create --name "${{ env.SHARE_EVIDENTLY }}" --account-name $AZURE_STORAGE_ACCOUNT || true
-
-          # Register storage mounts in the Container Apps environment
-          # storage-name values are identifiers for the environment; we'll reuse them below as 'storageName' in volumes
-          az containerapp env storage set \
-            --name ${{ env.ACA_ENVIRONMENT }} \
-            --resource-group $RG \
-            --storage-name mlruns-storage \
-            --account-name $AZURE_STORAGE_ACCOUNT \
-            --share-name "${{ env.SHARE_MLRUNS }}" \
-            --account-key "$STORAGE_KEY" || true
-
-          az containerapp env storage set \
-            --name ${{ env.ACA_ENVIRONMENT }} \
-            --resource-group $RG \
-            --storage-name grafana-storage \
-            --account-name $AZURE_STORAGE_ACCOUNT \
-            --share-name "${{ env.SHARE_GRAFANA }}" \
-            --account-key "$STORAGE_KEY" || true
-
-          az containerapp env storage set \
-            --name ${{ env.ACA_ENVIRONMENT }} \
-            --resource-group $RG \
-            --storage-name evidently-storage \
-            --account-name $AZURE_STORAGE_ACCOUNT \
-            --share-name "${{ env.SHARE_EVIDENTLY }}" \
-            --account-key "$STORAGE_KEY" || true
-
-          echo "Environment storage registered."
-
-      - name: Deploy Compose to Container Apps
-        env:
-          RG: ${{ env.AZURE_RESOURCE_GROUP }}
-          ENV: ${{ env.ACA_ENVIRONMENT }}
+      # -----------------------------
+      # Pull third-party images, retag to ACR & push
+      # -----------------------------
+      - name: Retag & push prom/prometheus
         run: |
-          # The containerapp-compose extension will translate your docker-compose.yml into Container Apps (one app per service).
-          # Make sure docker-compose.yml is at repo root (or give --compose-file-path)
-          az containerapp compose create \
-            --resource-group $RG \
-            --environment $ENV \
-            --compose-file-path docker-compose.yml \
-            --registry-server ${{ secrets.AZURE_ACR_LOGIN_SERVER }} \
-            --registry-username ${{ secrets.AZURE_ACR_USERNAME }} \
-            --registry-password ${{ secrets.AZURE_ACR_PASSWORD }}
+          set -e
+          SRC=prom/prometheus:latest
+          IMAGE="$ACR/prometheus:${SHA}"
+          LATEST="$ACR/prometheus:latest"
+          docker pull "$SRC"
+          docker tag "$SRC" "$IMAGE"
+          docker tag "$SRC" "$LATEST"
+          docker push "$IMAGE"
+          docker push "$LATEST"
+          echo "Pushed prometheus -> $IMAGE, $LATEST"
 
-          echo "Compose -> Container Apps deployment triggered."
-
-      - name: Show created container apps (quick check)
+      - name: Retag & push grafana/grafana
         run: |
-          az containerapp list -g ${{ env.AZURE_RESOURCE_GROUP }} -o table
+          set -e
+          SRC=grafana/grafana:main-ubuntu
+          IMAGE="$ACR/grafana:${SHA}"
+          LATEST="$ACR/grafana:latest"
+          docker pull "$SRC"
+          docker tag "$SRC" "$IMAGE"
+          docker tag "$SRC" "$LATEST"
+          docker push "$IMAGE"
+          docker push "$LATEST"
+          echo "Pushed grafana -> $IMAGE, $LATEST"
 
-      - name: Output endpoints
+      - name: Retag & push mlflow (ghcr)
         run: |
-          echo "Container Apps and their ingress:"
-          az containerapp list -g ${{ env.AZURE_RESOURCE_GROUP }} --query '[].{name:name, FQDN:properties.configuration.ingress.fqdn}' -o table
+          set -e
+          SRC=ghcr.io/mlflow/mlflow:latest
+          IMAGE="$ACR/mlflow:${SHA}"
+          LATEST="$ACR/mlflow:latest"
+          docker pull "$SRC"
+          docker tag "$SRC" "$IMAGE"
+          docker tag "$SRC" "$LATEST"
+          docker push "$IMAGE"
+          docker push "$LATEST"
+          echo "Pushed mlflow -> $IMAGE, $LATEST"
 
+      - name: Retag & push evidently service (docker hub)
+        run: |
+          set -e
+          SRC=evidently/evidently-service:latest
+          IMAGE="$ACR/evidently:${SHA}"
+          LATEST="$ACR/evidently:latest"
+          docker pull "$SRC"
+          docker tag "$SRC" "$IMAGE"
+          docker tag "$SRC" "$LATEST"
+          docker push "$IMAGE"
+          docker push "$LATEST"
+          echo "Pushed evidently -> $IMAGE, $LATEST"
+
+      - name: Retag & push nginx (report server)
+        run: |
+          set -e
+          SRC=nginx:alpine
+          IMAGE="$ACR/evidently-report-server:${SHA}"
+          LATEST="$ACR/evidently-report-server:latest"
+          docker pull "$SRC"
+          docker tag "$SRC" "$IMAGE"
+          docker tag "$SRC" "$LATEST"
+          docker push "$IMAGE"
+          docker push "$LATEST"
+          echo "Pushed nginx -> $IMAGE, $LATEST"
+
+      - name: Summary of pushed images
+        run: |
+          echo "Images pushed to ACR:"
+          echo "- $ACR/api:latest and $ACR/api:${SHA}"
+          echo "- $ACR/prometheus:latest and $ACR/prometheus:${SHA}"
+          echo "- $ACR/grafana:latest and $ACR/grafana:${SHA}"
+          echo "- $ACR/mlflow:latest and $ACR/mlflow:${SHA}"
+          echo "- $ACR/evidently:latest and $ACR/evidently:${SHA}"
+          echo "- $ACR/evidently-report-server:latest and $ACR/evidently-report-server:${SHA}"
+
+      - name: Logout Docker
+        run: docker logout ${{ env.AZURE_ACR_LOGIN_SERVER }}
