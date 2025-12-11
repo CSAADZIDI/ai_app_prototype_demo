@@ -1,5 +1,6 @@
 import os
 import joblib
+import mlflow.pyfunc
 
 # Définir le chemin absolu vers le fichier contenant les modèles et scalers
 models_file = os.path.abspath(
@@ -12,6 +13,25 @@ models_bordeaux_file = os.path.abspath(
 
 
 def load_model_a_lille():
+    """
+    Charge le modèle de régression pour les appartements à Lille.
+
+    Returns:
+        Un objet modèle (ex. : sklearn.ensemble.RandomForestRegressor).
+    """
+    
+
+    # Load model by registered name and version
+    model_name = "immopredict"
+    model_version = "v1"
+
+    model_uri = f"models:/{model_name}/{model_version}"
+    model = mlflow.pyfunc.load_model(model_uri)
+    return model
+    #return joblib.load(models_file)['model_a']
+
+
+def load_model_a_lille1():
     """
     Charge le modèle de régression pour les appartements à Lille.
 
