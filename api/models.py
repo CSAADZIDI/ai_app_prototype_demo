@@ -20,12 +20,16 @@ def load_model_a_lille():
         Un objet modèle (ex. : sklearn.ensemble.RandomForestRegressor).
     """
     
-
+    mlflow.set_tracking_uri("http://localhost:5000")
     # Load model by registered name and version
     model_name = "immopredict"
     model_version = "v1"
 
     model_uri = f"models:/{model_name}/{model_version}"
+    # model = mlflow.pyfunc.load_model(model_uri)
+
+    # run_id = "0c329c7cc1ae4bb8b11df8d1d39d9552"
+    #model_uri = f"runs:/{run_id}/model"  # adjust 'model' if artifact path is different
     model = mlflow.pyfunc.load_model(model_uri)
     return model
     #return joblib.load(models_file)['model_a']
